@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # World Bank Data Analysis with MCP and MistralAI
 
 This project combines World Bank data retrieval with AI-powered analysis using MistralAI. It consists of two main components:
@@ -117,3 +118,6 @@ API documentation is available at http://localhost:8000/docs when the server is 
 http://localhost:8000/docs
 http://localhost:8000/mcp/sse
 http://localhost:8000/get_data?country_code=DEU&query=inflation&start_year=1990&end_year=2023
+=======
+"# WB_MCP_AgentConnected_Mistral" 
+>>>>>>> 3c7abefc3d84acadbc2866ccd9c20f4966a2713a
