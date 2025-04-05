@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Bank Data Analyzer</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>World Bank Data Analyzer</h1>
+            <p>Powered by MistralAI</p>
+        </header>
+
+        <main>
+            <div class="query-section">
+                <div class="input-group">
+                    <input type="text" id="queryInput" placeholder="Enter your query (e.g., 'Give me GDP per capita of India from 2000 to 2025')">
+                    <button id="submitQuery">Analyze</button>
+                </div>
+                
+                <div class="examples">
+                    <h3>Example Queries:</h3>
+                    <ul>
+                        <li>"Show me the population of China from 2010 to 2020"</li>
+                        <li>"What is the inflation rate of Brazil from 2015 to 2023"</li>
+                        <li>"Give me GDP per capita of India from 2000 to 2025"</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <div class="loading" id="loadingIndicator">
+                    <div class="spinner"></div>
+                    <p>Fetching and analyzing data...</p>
+                </div>
+                
+                <div class="result-container" id="resultContainer">
+                    <div class="raw-data">
+                        <h2>Raw Data</h2>
+                        <pre id="rawData"></pre>
+                    </div>
+                    
+                    <div class="analysis">
+                        <h2>AI Analysis</h2>
+                        <div id="aiAnalysis"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Available Indicators: GDP, GDP per capita, Literacy rate, Population, Life expectancy, Inflation, Unemployment rate</p>
+        </footer>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html> 
