@@ -4,7 +4,7 @@ import re
 from dotenv import load_dotenv
 from mistralai.client import MistralClient
 from agent import MCPClient
-from world_bank_data import get_data
+from world_bank_data import get_data, INDICATOR_MAPPING
 
 load_dotenv()
 
@@ -18,16 +18,8 @@ class MistralAnalyzer:
         self.mistral_client = MistralClient(api_key=mistral_api_key)
         self.mcp_client = mcp_instance if mcp_instance else MCPClient()
         
-        # Initialize indicators mapping
-        self.indicators = {
-            "gdp": "gdp",
-            "gdp per capita": "gdp per capita",
-            "literacy rate": "literacy rate",
-            "population": "population",
-            "life expectancy": "life expectancy",
-            "inflation": "inflation",
-            "unemployment rate": "unemployment rate"
-        }
+        # Use the imported INDICATOR_MAPPING
+        self.indicators = INDICATOR_MAPPING
         
         # ISO 3166-1 alpha-3 country codes mapping
         self.country_codes = {
@@ -82,9 +74,11 @@ class MistralAnalyzer:
         
         # Find the indicator (GDP, inflation, etc.)
         indicator = None
+        indicator_key = None
         for ind in self.indicators:
             if ind in query:
-                indicator = self.indicators[ind]
+                indicator_key = ind
+                indicator = ind  # We keep the user-friendly name for the query
                 break
         
         if not indicator:
