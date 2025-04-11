@@ -1,0 +1,1 @@
+IMF = https://www.imf.org/external/datamapper/api/v1/{indicators_id}/{country}?periods=2000,2025
