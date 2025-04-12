@@ -17,14 +17,20 @@
             <div class="result-container" id="resultContainer">
                 <div class="raw-data">
                     <h2>Raw Data</h2>
+                    <div class="spinner" id="rawDataSpinner" style="display: none;"></div>
                     <pre id="rawData"></pre>
                 </div>
                 
                 <div class="analysis">
                     <h2>AI Analysis</h2>
+                    <div class="spinner" id="aiAnalysisSpinner" style="display: none;"></div>
                     <div id="aiAnalysis"></div>
                 </div>
             </div>
+        </div>
+        <div class="loading" id="loadingIndicator" style="display: none;">
+            <div class="spinner"></div>
+            <p>Fetching and analyzing data...</p>
         </div>
     </div>
     <script src="/static/scripts.js"></script>

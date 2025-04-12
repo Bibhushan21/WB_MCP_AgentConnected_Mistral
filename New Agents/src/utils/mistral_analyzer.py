@@ -12,7 +12,7 @@ class MistralAnalyzer:
         self.logger = logging.getLogger("MistralAnalyzer")
         
         # Initialize MistralAI client
-        mistral_api_key = 'api'
+        mistral_api_key = 'g7PZ1xLVJrA6XkMPNPzh3j5ZaNdBuDUI'
         
         self.client = MistralClient(api_key=mistral_api_key)
 

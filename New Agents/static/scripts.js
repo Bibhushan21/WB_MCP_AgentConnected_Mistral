@@ -23,7 +23,12 @@ document.getElementById('query-form').addEventListener('submit', async function(
     event.preventDefault();
     const query = document.getElementById('query').value;
     console.log('Submitting query:', query);
-    const response = await fetch('/analyze', {
+    
+    // Show loading indicators
+    document.getElementById('rawDataSpinner').style.display = 'block';
+    document.getElementById('aiAnalysisSpinner').style.display = 'block';
+    
+    const response = await fetch('/mcp/fetch', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -32,6 +37,10 @@ document.getElementById('query-form').addEventListener('submit', async function(
     });
     const result = await response.json();
     console.log('Received result:', result);
+    
+    // Hide loading indicators
+    document.getElementById('rawDataSpinner').style.display = 'none';
+    document.getElementById('aiAnalysisSpinner').style.display = 'none';
     
     // Format and display analysis
     const analysisHtml = formatAnalysis(result.analyses.merged);

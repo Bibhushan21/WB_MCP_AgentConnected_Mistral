@@ -10,7 +10,8 @@ class IMFAgent(BaseAgent):
         super().__init__("IMF")
         self.base_url = "http://dataservices.imf.org/REST/SDMX_JSON.svc"
         self.indicators_mapping = {
-            "gdp": "PPPGDP",  # Real GDP growth
+            "gdp": "PPPGDP",# Real GDP growth
+            "gdp per capita": "NGDPDPC",
             "gdp growth": "NGDP_RPCH",  # Added GDP growth
             "inflation": "PCPIPCH",  # Inflation rate
             "unemployment": "LUR",  # Unemployment rate
@@ -73,25 +74,13 @@ class IMFAgent(BaseAgent):
             if not values:
                 raise ValueError("No data found in IMF response")
 
-            def convert_to_standard_format(value, unit):
-                """Convert value to standard format based on unit."""
-                if unit == 'trillion':
-                    return value * 1e12
-                elif unit == 'billion':
-                    return value * 1e9
-                return value
-
-            # Assume unit is provided in metadata or context
-            unit = 'billion'  # Example: this should be dynamically determined
-
             transformed_data_points = []
             for indicator_code, countries in values.items():
                 for country_code, data in countries.items():
                     for year, value in data.items():
-                        standard_value = convert_to_standard_format(float(value), unit)
                         transformed_data_points.append(
                             DataPoint(
-                                value=standard_value,
+                                value=float(value),
                                 year=int(year),
                                 country_code=country_code,
                                 country_name="",  # Country name not provided in this structure
