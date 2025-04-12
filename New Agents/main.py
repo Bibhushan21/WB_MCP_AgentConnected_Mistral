@@ -270,21 +270,21 @@ async def main():
                 print("\nCombined Analysis:")
                 print(result.analyses["combined"])
             
-            # Print individual dataset results
-            for dataset in result.datasets:
-                print(f"\nSource: {dataset.metadata.source}")
-                print(f"Indicator: {dataset.metadata.indicator_name}")
-                print(f"Number of data points: {len(dataset.data)}")
+            # # Print individual dataset results
+            # for dataset in result.datasets:
+            #     print(f"\nSource: {dataset.metadata.source}")
+            #     print(f"Indicator: {dataset.metadata.indicator_name}")
+            #     print(f"Number of data points: {len(dataset.data)}")
                 
-                # Print sample data points
-                print("\nSample data points:")
-                for point in sorted(dataset.data, key=lambda x: x.year)[:5]:
-                    print(f"Year: {point.year}, Value: {point.value}")
+                # # Print sample data points
+                # print("\nSample data points:")
+                # for point in sorted(dataset.data, key=lambda x: x.year)[:5]:
+                #     print(f"Year: {point.year}, Value: {point.value}")
                 
                 # Print source-specific analysis
-                if result.analyses and dataset.metadata.source in result.analyses:
-                    print("\nSource-specific Analysis:")
-                    print(result.analyses[dataset.metadata.source])
+                # if result.analyses and dataset.metadata.source in result.analyses:
+                #     print("\nSource-specific Analysis:")
+                #     print(result.analyses[dataset.metadata.source])
             
         except Exception as e:
             print(f"\nError: {str(e)}")

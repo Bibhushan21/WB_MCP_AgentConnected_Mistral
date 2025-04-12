@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic AI Data Analysis</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Agentic AI Data Analysis</h1>
+        <form id="query-form">
+            <input type="text" id="query" placeholder="Enter your query here...">
+            <button type="submit">Analyze</button>
+        </form>
+        <div class="results-section">
+            <div class="result-container" id="resultContainer">
+                <div class="raw-data">
+                    <h2>Raw Data</h2>
+                    <pre id="rawData"></pre>
+                </div>
+                
+                <div class="analysis">
+                    <h2>AI Analysis</h2>
+                    <div id="aiAnalysis"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/static/scripts.js"></script>
+</body>
+</html>

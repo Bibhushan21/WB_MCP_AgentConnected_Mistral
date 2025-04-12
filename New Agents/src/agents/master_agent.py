@@ -10,7 +10,7 @@ from .world_bank_agent import WorldBankAgent
 from .imf_agent import IMFAgent
 from .oecd_agent import OECDAgent
 from .un_agent import UNAgent
-from ..schemas.data_schema import AggregatedDataResponse, DataSet
+from ..schemas.data_schema import AggregatedDataResponse, DataSet, Metadata, DataSource
 from ..utils.mistral_analyzer import MistralAnalyzer
 
 load_dotenv()
@@ -32,9 +32,44 @@ class MasterAgent:
             self.logger.error(f"⚠️ Failed to initialize MistralAnalyzer: {e}")
             self.analyzer = None
 
+    async def _merge_datasets(self, datasets: List[DataSet]) -> DataSet:
+        """
+        Merge datasets from all sources into a single dataset.
+        """
+        merged_data_points = {}
+
+        for dataset in datasets:
+            for data_point in dataset.data:
+                year = data_point.year
+                if year not in merged_data_points:
+                    merged_data_points[year] = data_point
+                else:
+                    # Merge data points by averaging values or choosing non-null values
+                    existing_point = merged_data_points[year]
+                    if data_point.value is not None:
+                        if existing_point.value is None:
+                            existing_point.value = data_point.value
+                        else:
+                            existing_point.value = (existing_point.value + data_point.value) / 2
+
+        # Create a merged dataset
+        merged_dataset = DataSet(
+            metadata=Metadata(
+                source=DataSource.WORLD_BANK,  # Use a generic source
+                indicator_code="merged",
+                indicator_name="Merged Data",
+                last_updated=datetime.now(),
+                frequency="yearly",
+                unit=""
+            ),
+            data=list(merged_data_points.values())
+        )
+
+        return merged_dataset
+
     async def fetch_all_data(self, params: Dict[str, Any]) -> AggregatedDataResponse:
         """
-        Fetch data from all available agents concurrently
+        Fetch data from all available agents concurrently and merge the results.
         """
         tasks = []
         async with asyncio.TaskGroup() as group:
@@ -46,8 +81,55 @@ class MasterAgent:
                 )
 
         results = [task.result() for task in tasks if not task.cancelled()]
-        
-        return await self._aggregate_results(params, results)
+
+        # Print fetched data from each source
+        print("\nFetched Data:")
+        for result in results:
+            if "error" not in result:
+                dataset = DataSet(**result)
+                print(f"\nSource: {dataset.metadata.source}")
+                for point in dataset.data:
+                    print(f"Year: {point.year}, Value: {point.value}")
+            else:
+                print(f"Error fetching data from {result['agent']}: {result['error']}")
+
+        # Merge datasets
+        merged_dataset = await self._merge_datasets([DataSet(**result) for result in results if "error" not in result])
+
+        # Print merged data
+        print("\nMerged Data:")
+        for point in merged_dataset.data:
+            print(f"Year: {point.year}, Value: {point.value}")
+
+        # Analyze merged data
+        analyses = {}
+        if self.analyzer:
+            try:
+                analysis = await self.analyzer.analyze_data(
+                    country=params.get("country", "Unknown"),
+                    indicator=params.get("indicator", "Unknown"),
+                    data=merged_dataset.dict()
+                )
+                analyses["merged"] = analysis
+                # Print analysis
+                print("\nAnalysis of Merged Data:")
+                print(analysis)
+            except Exception as e:
+                self.logger.error(f"Error analyzing merged data: {str(e)}")
+                analyses["error"] = f"Analysis failed: {str(e)}"
+        else:
+            analyses["error"] = "Analyzer not initialized."
+
+        response = AggregatedDataResponse(
+            query_params=params,
+            timestamp=datetime.now(),
+            datasets=[merged_dataset],
+            status="completed" if not any("error" in result for result in results) else "partial_success",
+            error_summary={result["agent"]: [result["error"]] for result in results if "error" in result},
+            analyses=analyses
+        )
+
+        return response
 
     async def _fetch_from_agent(self, agent_class: Type[BaseAgent], params: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -62,68 +144,6 @@ class MasterAgent:
                 "error": str(e),
                 "agent": agent_class.__name__
             }
-
-    async def _aggregate_results(self, query_params: Dict[str, Any], results: List[Dict[str, Any]]) -> AggregatedDataResponse:
-        """
-        Aggregate results from all agents and include analysis if available
-        """
-        datasets = []
-        error_summary = {}
-        analyses = {}
-
-        # First, collect all successful datasets
-        for result in results:
-            if "error" in result:
-                error_summary[result["agent"]] = [result["error"]]
-                continue
-
-            dataset = DataSet(**result)
-            datasets.append(dataset)
-
-        # Then, analyze all datasets together if we have data
-        if datasets and self.analyzer:
-            try:
-                # Combine all datasets for a comprehensive analysis
-                combined_data = {
-                    "datasets": [d.dict() for d in datasets],
-                    "sources": [d.metadata.source for d in datasets]
-                }
-                
-                analysis = await self.analyzer.analyze_data(
-                    country=query_params.get("country", "Unknown"),
-                    indicator=query_params.get("indicator", "Unknown"),
-                    data=combined_data
-                )
-                
-                # Store the comprehensive analysis
-                analyses["combined"] = analysis
-                
-                # Also analyze individual datasets if requested
-                for dataset in datasets:
-                    individual_analysis = await self.analyzer.analyze_data(
-                        country=query_params.get("country", "Unknown"),
-                        indicator=query_params.get("indicator", "Unknown"),
-                        data=dataset.dict()
-                    )
-                    analyses[dataset.metadata.source] = individual_analysis
-                    
-            except Exception as e:
-                self.logger.error(f"Error analyzing data: {str(e)}")
-                analyses["error"] = f"Analysis failed: {str(e)}"
-
-        response = AggregatedDataResponse(
-            query_params=query_params,
-            timestamp=datetime.now(),
-            datasets=datasets,
-            status="completed" if not error_summary else "partial_success",
-            error_summary=error_summary if error_summary else None
-        )
-        
-        # Add analyses to the response if available
-        if analyses:
-            response.analyses = analyses
-
-        return response
 
     async def fetch_with_retry(self, params: Dict[str, Any], max_retries: int = 3) -> AggregatedDataResponse:
         """
