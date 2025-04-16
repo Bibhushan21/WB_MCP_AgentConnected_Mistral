@@ -10,7 +10,7 @@ from .world_bank_agent import WorldBankAgent
 from .imf_agent import IMFAgent
 from .oecd_agent import OECDAgent
 from .un_agent import UNAgent
-from ..schemas.data_schema import AggregatedDataResponse, DataSet, Metadata, DataSource
+from ..schemas.data_schema import AggregatedDataResponse, DataSet, Metadata, DataSource, DataPoint
 from ..utils.mistral_analyzer import MistralAnalyzer
 
 load_dotenv()
@@ -38,21 +38,25 @@ class MasterAgent:
         """
         merged_data_points = {}
 
+        # Collect all unique years from the datasets
+        all_years = set()
         for dataset in datasets:
             for data_point in dataset.data:
-                year = data_point.year
-                if year not in merged_data_points:
-                    merged_data_points[year] = data_point
-                else:
-                    # Merge data points by averaging values or choosing non-null values
-                    existing_point = merged_data_points[year]
-                    if data_point.value is not None:
-                        if existing_point.value is None:
-                            existing_point.value = data_point.value
-                        else:
-                            existing_point.value = (existing_point.value + data_point.value) / 2
+                all_years.add(data_point.year)
 
-        # Create a merged dataset
+        # Prioritize World Bank data and fill missing years with IMF data
+        for year in sorted(all_years):
+            wb_data_point = next((dp for ds in datasets if ds.metadata.source == DataSource.WORLD_BANK for dp in ds.data if dp.year == year), None)
+            imf_data_point = next((dp for ds in datasets if ds.metadata.source == DataSource.IMF for dp in ds.data if dp.year == year), None)
+
+            if wb_data_point:
+                # Use World Bank data if available
+                merged_data_points[year] = wb_data_point
+            elif imf_data_point:
+                # Use IMF data if World Bank data is not available
+                merged_data_points[year] = imf_data_point
+
+        # Create a merged dataset with normalized unit
         merged_dataset = DataSet(
             metadata=Metadata(
                 source=DataSource.WORLD_BANK,  # Use a generic source
@@ -60,7 +64,7 @@ class MasterAgent:
                 indicator_name="Merged Data",
                 last_updated=datetime.now(),
                 frequency="yearly",
-                unit=""
+                unit="trillions"  # Set the unit to trillions
             ),
             data=list(merged_data_points.values())
         )
@@ -69,9 +73,11 @@ class MasterAgent:
 
     async def fetch_all_data(self, params: Dict[str, Any]) -> AggregatedDataResponse:
         """
-        Fetch data from all available agents concurrently and merge the results.
+        Fetch data from all available agents concurrently and display results incrementally.
         """
         tasks = []
+        results = []
+
         async with asyncio.TaskGroup() as group:
             for agent_name, agent_class in self.agents.items():
                 tasks.append(
@@ -80,16 +86,19 @@ class MasterAgent:
                     )
                 )
 
-        results = [task.result() for task in tasks if not task.cancelled()]
+        # Process each task as it completes
+        for task in asyncio.as_completed(tasks):
+            result = await task
+            results.append(result)
 
-        # Print fetched data from each source
-        print("\nFetched Data:")
-        for result in results:
+            # Display fetched data from each source immediately
             if "error" not in result:
                 dataset = DataSet(**result)
                 print(f"\nSource: {dataset.metadata.source}")
                 for point in dataset.data:
-                    print(f"Year: {point.year}, Value: {point.value}")
+                    # Format the value to fixed-point notation
+                    formatted_value = f"{point.value:.12f}"
+                    print(f"Year: {point.year}, Value: {formatted_value}")
             else:
                 print(f"Error fetching data from {result['agent']}: {result['error']}")
 

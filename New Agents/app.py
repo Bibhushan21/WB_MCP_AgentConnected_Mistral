@@ -3,6 +3,7 @@ import asyncio
 from src.agents.master_agent import MasterAgent
 from main import QueryParser
 from src.utils.mistral_analyzer import MistralAnalyzer
+from src.utils.visual_representation import prepare_visual_data
 
 app = Flask(__name__)
 
@@ -55,6 +56,23 @@ def mcp_analyze():
         return jsonify({"analysis": analysis_result})
     except Exception as e:
         app.logger.error(f'Error in mcp_analyze: {str(e)}')
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/mcp/visualize', methods=['POST'])
+def mcp_visualize():
+    try:
+        data = request.json
+        merged_data = data.get('merged_data')
+        
+        app.logger.info('Preparing data for visualization')
+
+        # Prepare data for visualization
+        visual_data = prepare_visual_data(merged_data)
+
+        app.logger.info('Data prepared for visualization')
+        return jsonify(visual_data)
+    except Exception as e:
+        app.logger.error(f'Error in mcp_visualize: {str(e)}')
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':

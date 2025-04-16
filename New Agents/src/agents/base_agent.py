@@ -4,6 +4,35 @@ import aiohttp
 import asyncio
 from datetime import datetime, timedelta
 import logging
+from ..schemas.data_schema import DataPoint
+
+# Define conversion factors globally
+conversion_factors = {
+    "millions": 1e-6,
+    "billions": 1e-3,
+    "trillions": 1.0  # Already in trillions
+}
+
+class SharedState:
+    """A simple shared state to store units determined by agents."""
+    un_unit: str = "unknown"
+    wb_unit: str = "unknown"
+
+    @classmethod
+    def set_un_unit(cls, unit: str):
+        cls.un_unit = unit
+
+    @classmethod
+    def set_wb_unit(cls, unit: str):
+        cls.wb_unit = unit
+
+    @classmethod
+    def get_un_unit(cls) -> str:
+        return cls.un_unit
+
+    @classmethod
+    def get_wb_unit(cls) -> str:
+        return cls.wb_unit
 
 class BaseAgent(ABC):
     def __init__(self, name: str, cache_duration: int = 3600):
@@ -87,3 +116,43 @@ class BaseAgent(ABC):
                 self.logger.warning(f"Attempt {attempt + 1} failed, retrying in {delay} seconds...")
                 await asyncio.sleep(delay)
                 delay *= 2  # Exponential backoff 
+
+    def convert_to_unit(self, data_points: list[DataPoint], target_unit: str) -> list[DataPoint]:
+        """
+        Convert data points to the target unit.
+        """
+        # Get the conversion factor for the target unit
+        target_conversion_factor = conversion_factors.get(target_unit.lower(), 1.0)
+
+        # Convert each data point
+        converted_data_points = []
+        for point in data_points:
+            # Determine the current unit conversion factor
+            current_unit = point.additional_info.get("unit", "trillions").lower()
+            current_conversion_factor = conversion_factors.get(current_unit, 1.0)
+
+            # Convert value to target unit
+            converted_value = point.value * (current_conversion_factor / target_conversion_factor)
+            converted_data_points.append(DataPoint(
+                value=converted_value,
+                year=point.year,
+                country_code=point.country_code,
+                country_name=point.country_name,
+                additional_info=point.additional_info
+            ))
+
+        return converted_data_points 
+
+    def determine_unit(self, value: float) -> str:
+        """
+        Determine the unit of the data based on the number of digits.
+        """
+        num_digits = len(str(int(value)))
+        if num_digits <= 6:
+            return "units"
+        elif num_digits <= 9:
+            return "millions"
+        elif num_digits <= 12:
+            return "billions"
+        else:
+            return "trillions" 

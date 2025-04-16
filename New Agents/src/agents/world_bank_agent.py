@@ -1,7 +1,7 @@
 from typing import Dict, Any
 import asyncio
 from datetime import datetime
-from .base_agent import BaseAgent
+from .base_agent import BaseAgent, SharedState
 from ..schemas.data_schema import DataSet, DataPoint, Metadata, DataSource
 
 class WorldBankAgent(BaseAgent):
@@ -11,7 +11,7 @@ class WorldBankAgent(BaseAgent):
         # Extended indicators mapping from wb_indicators.py
         self.indicators_mapping = {
             # Economic indicators
-            "gdp": "NY.GDP.MKTP.PP.CD", #'Currency': 'USD'
+            "gdp": "NY.GDP.MKTP.CD", #'Currency': 'USD'
             "gdp per capita": "NY.GDP.PCAP.CD",
             "gdp growth": "NY.GDP.MKTP.KD.ZG",
             "gni": "NY.GNP.MKTP.CD",
@@ -114,6 +114,15 @@ class WorldBankAgent(BaseAgent):
                         )
                     )
 
+            # Determine the unit of the data based on the first data point
+            if transformed_data_points:
+                first_value = transformed_data_points[0].value
+                unit = self.determine_unit(first_value)
+                print(f"Determined unit for World Bank data: {unit}")  # Print the determined unit
+                SharedState.set_wb_unit(unit)  # Set the determined unit in SharedState
+            else:
+                unit = "unknown"
+
             # Sort data points by year
             transformed_data_points.sort(key=lambda x: x.year)
 
@@ -124,7 +133,7 @@ class WorldBankAgent(BaseAgent):
                     indicator_name=indicator_details.get("value", ""),
                     last_updated=datetime.now(),
                     frequency="yearly",
-                    unit=metadata_raw.get("unit", "")
+                    unit=unit  # Store the determined unit
                 ),
                 data=transformed_data_points
             )

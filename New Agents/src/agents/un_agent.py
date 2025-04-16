@@ -2,7 +2,7 @@ from typing import Dict, Any
 import asyncio
 from datetime import datetime
 import aiohttp
-from .base_agent import BaseAgent
+from .base_agent import BaseAgent, SharedState
 from ..schemas.data_schema import DataSet, DataPoint, Metadata, DataSource
 import xml.etree.ElementTree as ET
 import csv
@@ -12,17 +12,17 @@ class UNAgent(BaseAgent):
         super().__init__("UN")
         self.base_url = "https://data.un.org/ws/rest/data"
         self.indicators_mapping = {
-            "population": "SP.POP.TOTL",  # Total population
-            "life_expectancy": "SP.DYN.LE00.IN",  # Life expectancy at birth
-            "education_index": "EDU.IDX",  # Education index
+            "population": "SP_POP_TOTL",  # Total population
+            "life_expectancy": "SP_DYN_LE00_IN",  # Life expectancy at birth
+            "education_index": "EDU_IDX",  # Education index
             "gender_inequality": "GII",  # Gender Inequality Index
             "human_development": "HDI",  # Human Development Index
-            "maternal_mortality": "SH.MMR",  # Maternal mortality ratio
-            "child_mortality": "SH.DYN.MORT",  # Under-5 mortality rate
-            "access_electricity": "EG.ELC.ACCS.ZS",  # Access to electricity
-            "internet_users": "IT.NET.USER.ZS",  # Internet users
-            "gdp growth": "NY.GDP.MKTP.KD.ZG_UN",  # Added GDP growth
-            "gdp": "NY_GDP_MKTP_PP_CD",  # GDP
+            "maternal_mortality": "SH_MMR",  # Maternal mortality ratio
+            "child_mortality": "SH_DYN_MORT",  # Under-5 mortality rate
+            "access_electricity": "EG_ELC_ACCS_ZS",  # Access to electricity
+            "internet_users": "IT_NET_USER_ZS",  # Internet users
+            "gdp growth": "NY_GDP_MKTP_KD_ZG_UN",  # Added GDP growth
+            "gdp": "NY_GDP_MKTP_CD",  # GDP
         }
 
     def get_available_indicators(self) -> list[str]:
@@ -104,6 +104,15 @@ class UNAgent(BaseAgent):
                             )
                         )
 
+            # Determine the unit of the data based on the first data point
+            if transformed_data_points:
+                first_value = transformed_data_points[0].value
+                unit = self.determine_unit(first_value)
+                print(f"Determined unit for UN data: {unit}")  # Print the determined unit
+                SharedState.set_un_unit(unit)  # Set the determined unit in SharedState
+            else:
+                unit = "unknown"
+
             # Sort data points by year
             transformed_data_points.sort(key=lambda x: x.year)
 
@@ -114,7 +123,7 @@ class UNAgent(BaseAgent):
                     indicator_name="",  # Indicator name not provided in this structure
                     last_updated=datetime.now(),
                     frequency="yearly",  # Assuming yearly frequency
-                    unit=""
+                    unit=unit  # Store the determined unit
                 ),
                 data=transformed_data_points
             )

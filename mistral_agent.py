@@ -11,10 +11,10 @@ load_dotenv()
 class MistralAnalyzer:
     def __init__(self, mcp_instance=None):
         # Initialize MistralAI client
-        mistral_api_key = "g7PZ1xLVJrA6XkMPNPzh3j5ZaNdBuDUI"  # Direct API key assignment
-        if not isinstance(mistral_api_key, str) or len(mistral_api_key) < 32:
-            raise ValueError("Invalid Mistral API key format")
-            
+        mistral_api_key = os.getenv("MISTRAL_API_KEY")
+        if not mistral_api_key:
+            raise ValueError("MISTRAL_API_KEY environment variable is required")
+        
         self.mistral_client = MistralClient(api_key=mistral_api_key)
         self.mcp_client = mcp_instance if mcp_instance else MCPClient()
         
@@ -157,6 +157,15 @@ Here's the data:
 Please provide a well-structured, detailed analysis that would be helpful for understanding the economic situation of {country} based on this {indicator} data."""
 
     async def analyze_data(self, query: str) -> str:
+        """
+        Fetch data using MCP client and analyze it using MistralAI
+        
+        Args:
+            query: Natural language query (e.g., "Give me GDP per capita of India from 2000 to 2025")
+            
+        Returns:
+            str: Detailed analysis of the data
+        """
         try:
             # Parse the query using our parse_query method
             indicator, country_code, start_year, end_year = self.parse_query(query)
@@ -176,9 +185,9 @@ Please provide a well-structured, detailed analysis that would be helpful for un
             prompt = self._create_analysis_prompt(country_code, indicator, data)
             
             try:
-                # Get analysis from MistralAI using chat method
+                # Get analysis from MistralAI using create method
                 response = self.mistral_client.chat(
-                    model="mistral-medium",
+                    model="mistral-medium",  # Changed from mistral-large to mistral-medium
                     messages=[
                         {
                             "role": "system",
@@ -198,26 +207,23 @@ Please provide a well-structured, detailed analysis that would be helpful for un
                     
             except Exception as e:
                 print(f"MistralAI Error: {str(e)}")
-                # Try again with simpler prompt
-                try:
-                    response = self.mistral_client.chat(
-                        model="mistral-medium",
-                        messages=[
-                            {
-                                "role": "user",
-                                "content": f"Please analyze this economic data briefly: {data}"
-                            }
-                        ]
-                    )
-                    return response.choices[0].message.content
-                except Exception as e:
-                    return f"Error during analysis: {str(e)}"
+                # Try again with simpler prompt if the first attempt fails
+                response = self.mistral_client.chat(
+                    model="mistral-medium",  # Fallback to medium model
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": f"Analyze this economic data: {data}"
+                        }
+                    ]
+                )
+                return response.choices[0].message.content
             
         except Exception as e:
             error_msg = str(e)
             print(f"Analysis Error: {error_msg}")
             if "API key" in error_msg.lower():
-                return "Error: Invalid or missing MistralAI API key."
+                return "Error: Invalid or missing MistralAI API key. Please check your .env file."
             return f"Error during analysis: {error_msg}"
 
 async def main():
